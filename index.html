@@ -14,8 +14,9 @@
         th { background-color: #f2f2f2; font-weight: bold; }
         tr:nth-child(even) { background-color: #f9f9f9; }
         .error { color: red; }
+        .success { color: green; }
+        .checking { color: #666; }
         .last-updated { color: #666; font-size: 14px; margin-bottom: 10px; }
-        /* Responsive design additions */
         @media (max-width: 600px) {
             table { 
                 display: block; 
@@ -54,10 +55,11 @@
                 <th>Port</th>
                 <th>Country</th>
                 <th>Provider</th>
+                <th>Status (ms)</th>
             </tr>
         </thead>
         <tbody>
-            <tr><td colspan="4">Loading proxies...</td></tr>
+            <tr><td colspan="5">Loading proxies...</td></tr>
         </tbody>
     </table>
 
@@ -78,7 +80,8 @@
                             ip: parts[0].trim(),
                             port: parts[1].trim(),
                             country: parts[2].trim(),
-                            provider: parts[3].trim()
+                            provider: parts[3].trim(),
+                            status: 'Checking...' // Initial status
                         };
                     }
                     return null;
@@ -86,8 +89,23 @@
                 return proxies;
             } catch (error) {
                 console.error('Fetch error:', error);
-                document.querySelector('#proxyTable tbody').innerHTML = '<tr><td colspan="4" class="error">Error loading proxies. Please try refreshing.</td></tr>';
+                document.querySelector('#proxyTable tbody').innerHTML = '<tr><td colspan="5" class="error">Error loading proxies. Please try refreshing.</td></tr>';
                 return [];
+            }
+        }
+
+        async function checkProxy(proxy) {
+            try {
+                const response = await fetch(`https://check.proxyip.cmliussss.net/check?proxyip=${proxy.ip}:${proxy.port}`);
+                if (!response.ok) throw new Error('API check failed');
+                const data = await response.json();
+                return {
+                    status: data.success ? `Working: ${data.responseTime}ms` : `Failed: ${data.message || 'Unknown error'}`,
+                    className: data.success ? 'success' : 'error'
+                };
+            } catch (error) {
+                console.error(`Check failed for ${proxy.ip}:${proxy.port}:`, error);
+                return { status: 'Failed: Network error', className: 'error' };
             }
         }
 
@@ -124,7 +142,7 @@
             displayProxies();
         }
 
-        function displayProxies() {
+        async function displayProxies() {
             const tbody = document.querySelector('#proxyTable tbody');
             let proxiesToShow = [];
 
@@ -136,10 +154,11 @@
 
             tbody.innerHTML = '';
             if (proxiesToShow.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4">No proxies available for this selection.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5">No proxies available for this selection.</td></tr>';
                 return;
             }
 
+            // Set initial "Checking..." status
             proxiesToShow.forEach(proxy => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -147,9 +166,25 @@
                     <td>${proxy.port}</td>
                     <td>${proxy.country}</td>
                     <td>${proxy.provider}</td>
+                    <td class="checking">${proxy.status}</td>
                 `;
                 tbody.appendChild(row);
             });
+
+            // Check proxies in parallel
+            const checkPromises = proxiesToShow.map(async (proxy, index) => {
+                const result = await checkProxy(proxy);
+                proxy.status = result.status;
+                proxy.statusClass = result.className;
+                // Update the specific row
+                const rows = tbody.querySelectorAll('tr');
+                if (rows[index]) {
+                    rows[index].querySelector('td:last-child').textContent = proxy.status;
+                    rows[index].querySelector('td:last-child').className = proxy.statusClass;
+                }
+            });
+
+            await Promise.all(checkPromises);
 
             document.getElementById('lastUpdated').textContent = `Last updated: ${new Date().toLocaleString()}`;
         }
@@ -159,7 +194,7 @@
             if (allProxies.length > 0) {
                 const countries = [...new Set(allProxies.map(p => p.country))];
                 populateDropdown(countries);
-                displayProxies();
+                await displayProxies();
             }
         }
 
