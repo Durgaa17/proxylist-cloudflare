@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://via.placeholder.com/150x50.png?text=Proxy+List+App" alt="Proxy List Web App Logo">
+  <img src="[https://via.placeholder.com/150x50.png?text=Proxy+List+App](https://cf-proxy.netlify.app/)" alt="Proxy List Web App">
 </p>
 
 <h1 align="center">🌟 Proxy List Web App 🌟</h1>
