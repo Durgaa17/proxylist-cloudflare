@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://cf-proxy.netlify.app/" alt="Proxy List Web App">
+  <a href="https://cf-proxy.netlify.app/" alt="Proxy List Web App">
 </p>
 
 <h1 align="center">🌟 Proxy List Web App 🌟</h1>
